@@ -16,8 +16,69 @@ public class Player implements slather.sim.Player {
     }
 
     public Move play(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
-	if (player_cell.getDiameter() >= 2) // reproduce whenever possible
-	    return new Move(true, (byte)-1, (byte)-1);
+		if (player_cell.getDiameter() >= 2) // reproduce whenever possible
+	    	return new Move(true, (byte)-1, (byte)-1);
+
+
+	    if (nearby_cells.size() == 0 && memory > 0) {
+	    	Point vector = extractVectorFromAngle( (int)memory);
+	    		// check for collisions
+	    	if (!collides( player_cell, vector, nearby_cells, nearby_pheromes))
+				return new Move(vector, memory);
+	    }
+
+	    int[] direction = new int[4];
+	    int min_dir = Integer.MAX_VALUE;
+	    int min_index = 0;
+	    for (Cell nearby_cell : nearby_cells) {
+	    	double m_x = nearby_cell.getPosition().x - player_cell.getPosition().x;
+	    	double m_y = nearby_cell.getPosition().y - player_cell.getPosition().y;
+	    	if (m_x >= 0 && m_y >= 0) { ++direction[0]; }
+	    	if (m_x >= 0 && m_y < 0) { ++direction[3]; }
+	    	if (m_x < 0 && m_y >= 0) { ++direction[1]; }
+	    	if (m_x < 0 && m_y < 0) { ++direction[2]; }
+	    	//System.out.println("distance: " + nearby_cell.distance(player_cell));
+	    	//System.out.println("Diameter: " + nearby_cell.getDiameter());
+	    }
+
+	    for (int i = 0 ; i < direction.length ; ++i) {
+	    	if (direction[i] < min_dir) {
+	    		min_dir = direction[i];
+	    		min_index = i;
+	    	}
+	    }
+
+	    int arg = gen.nextInt(90)+min_index * 90;
+	    Point vector = extractVectorFromAngle(arg);
+	   	if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) {
+			return new Move(vector, (byte) arg);
+		} else {
+			return new Move(new Point(0,0), (byte)0);
+		}
+	    /*
+	    for (Cell nearby_p : nearby_pheromes) {
+	    	double m_x = nearby_p.getPosition().x - player_cell.getPosition().x;
+	    	double m_y = nearby_p.getPosition().y - player_cell.getPosition().y;
+	    	if (m_x >= 0 && m_y >= 0) { ++direction[0]; }
+	    	if (m_x >= 0 && m_y < 0) { ++direction[3]; }
+	    	if (m_x < 0 && m_y >= 0) { ++direction[1]; }
+	    	if (m_x < 0 && m_y < 0) { ++direction[2]; }
+	    	//System.out.println("distance: " + nearby_cell.distance(player_cell));
+	    	//System.out.println("Diameter: " + nearby_cell.getDiameter());
+	    }*/
+
+	    //System.out.println(nearby_cells.size());
+/*
+	for (int i=0; i<4; i++) {
+	    int arg = gen.nextInt(180)+1;
+	    Point vector = extractVectorFromAngle(arg);
+	    if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) 
+		return new Move(vector, (byte) arg);
+	}*/
+
+	// if all tries fail, just chill in place
+	//return new Move(new Point(0,0), (byte)0);
+/*	    
 	if (memory > 0) { // follow previous direction unless it would cause a collision
 	    Point vector = extractVectorFromAngle( (int)memory);
 	    // check for collisions
@@ -34,7 +95,7 @@ public class Player implements slather.sim.Player {
 	}
 
 	// if all tries fail, just chill in place
-	return new Move(new Point(0,0), (byte)0);
+	return new Move(new Point(0,0), (byte)0);*/
     }
 
     // check if moving player_cell by vector collides with any nearby cell or hostile pherome
