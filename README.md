@@ -1,6 +1,6 @@
 This is the directory containing strategy files that we designed to project 2 of the Programming & Problem Solving course http://www.cs.columbia.edu/~kar/4444f16/
 
-Notes are kept here: 
+Notes are kept here: https://docs.google.com/document/d/1eVZND3tshZ2UHWBc0euW4Xj16scnhxJJJy2aCAIugQ8/edit
 
 The files themselves are not meaningful unless they are compiled together with the simulator, for those who have the simulator and want to change/add files under this directory, please keep in mind we should rename this "project2-g4" to "g4" under your local directory ./slather/
 
