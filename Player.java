@@ -47,43 +47,41 @@ public class Player implements slather.sim.Player {
 				return new Move(vector, memory);
 		}
 
-		int[] direction = new int[4];
-		int min_dir = Integer.MAX_VALUE;
-		List<Integer> min_index = new ArrayList<>();
+		double[] direction = new double[4];
 
 		for (Cell nearby_cell : nearby_cells) {
 			double m_x = nearby_cell.getPosition().x - player_cell.getPosition().x;
 			double m_y = nearby_cell.getPosition().y - player_cell.getPosition().y;
 			if (m_x >= 0 && m_y >= 0) {
-				direction[0] += 1;
+				direction[0] += trans1(nearby_cell.distance(player_cell));
 			}
 			if (m_x >= 0 && m_y < 0) {
-				direction[3] += 1;
+				direction[3] += trans1(nearby_cell.distance(player_cell));
 			}
 			if (m_x < 0 && m_y >= 0) {
-				direction[1] += 1;
+				direction[1] += trans1(nearby_cell.distance(player_cell));
 			}
 			if (m_x < 0 && m_y < 0) {
-				direction[2] += 1;
+				direction[2] += trans1(nearby_cell.distance(player_cell));
 			}
 		}
 
-		for (int i = 0; i < direction.length; ++i) {
-			if (direction[i] <= min_dir) {
-				min_dir = direction[i];
-			}
+		double sum = 0;
+
+		for (int index = 0; index < direction.length; ++index) {
+			sum += trans2(direction[index]);
 		}
 
-		for (int i = 0; i < direction.length; ++i) {
-			if (direction[i] == min_dir) {
-				min_index.add(i);
-			}
+		// We give each direction a probability direction[i]/sum
+		sum *= Math.random();
+		int index = 0;
+		for (; index < direction.length; ++index) {
+			sum -= trans2(direction[index]);
+			if (sum <= 0) break;
 		}
-
-		int selected = gen.nextInt(min_index.size());
 
 		// int arg = gen.nextInt(30) + min_index * 90 + 30;
-		int arg = min_index.get(selected) * 90 + gen.nextInt(90);
+		int arg = index * 90 + gen.nextInt(90);
 
 		Point vector = extractVectorFromAngle(arg);
 		if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) {
@@ -96,6 +94,14 @@ public class Player implements slather.sim.Player {
 				return new Move(vector2, (byte) arg2);
 		}
 		return new Move(new Point(0, 0), (byte) 0);	
+	}
+
+	private double trans1(double a) {
+		return 1.0/(a+0.5);
+	}
+
+	private double trans2(double a) {
+		return 1/Math.pow((0.01+a),2);
 	}
 
 	// check if moving player_cell by vector collides with any nearby cell or
