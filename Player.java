@@ -9,8 +9,9 @@ import java.util.*;
 public class Player implements slather.sim.Player {
 
 	private Random gen;
+	private final static double THRESHOLD = 2;
 
-	public void init(double d, int t) {
+	public void init(double d, int t, int side_length) {
 		gen = new Random();
 	}
 
@@ -81,7 +82,14 @@ public class Player implements slather.sim.Player {
 		}
 
 		// int arg = gen.nextInt(30) + min_index * 90 + 30;
-		int arg = index * 90 + gen.nextInt(90);
+		int arg = 0;
+
+		if (isCrowded(player_cell, nearby_cells, nearby_pheromes) == true) {
+			arg = memory + 36;
+		} else {
+			arg = index * 90 + gen.nextInt(90);
+		}
+
 
 		Point vector = extractVectorFromAngle(arg);
 		if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) {
@@ -94,6 +102,21 @@ public class Player implements slather.sim.Player {
 				return new Move(vector2, (byte) arg2);
 		}
 		return new Move(new Point(0, 0), (byte) 0);	
+	}
+
+	private boolean isCrowded(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
+		double weightSum = 0;
+		for (Cell nearby_cell : nearby_cells) {
+			weightSum += trans1(nearby_cell.distance(player_cell));
+		}
+
+		for (Pherome nearby_pherome : nearby_pheromes) {
+			if (nearby_pherome.player != player_cell.player) {
+				weightSum += 0.2 * trans1(nearby_pherome.distance(player_cell));
+			}
+		}
+
+		return weightSum >= Player.THRESHOLD;
 	}
 
 	private double trans1(double a) {
