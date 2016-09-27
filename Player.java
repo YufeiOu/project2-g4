@@ -33,7 +33,7 @@ public class Player implements slather.sim.Player {
 		int detector_sep = get_detector_sep(this.tail, this.visible_distance);
 		if (nearby_cells.size() == 0) {
 			arg = memory;
-		} else if (isCrowded(player_cell, nearby_cells, nearby_pheromes) == true) {
+		} else if (isCrowded(player_cell, nearby_cells, nearby_pheromes, 2) == true) {
 			arg = spin(player_cell, memory, nearby_cells, nearby_pheromes, spin_sep);
 		} else {
 			arg = detector(player_cell, memory, nearby_cells, nearby_pheromes, detector_sep);
@@ -111,7 +111,7 @@ public class Player implements slather.sim.Player {
 	private boolean isCrowded(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, double d_filter) {
 		return density(player_cell, nearby_cells, nearby_pheromes, d_filter) >= threshold(this.tail, this.visible_distance);
 	}
-	
+
 	private double density(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, double d_filter) {
 		double weightSum = 0;
 		for (Cell nearby_cell : nearby_cells) {
