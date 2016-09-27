@@ -81,6 +81,15 @@ public class Player implements slather.sim.Player {
 			direction[index] += trans1(nearby_cell.distance(player_cell));
 		}
 
+		for (Pherome nearby_pherome : nearby_pheromes) {
+			if (nearby_pherome.player == player_cell.player) continue;
+			double m_x = nearby_pherome.getPosition().x - player_cell.getPosition().x;
+			double m_y = nearby_pherome.getPosition().y - player_cell.getPosition().y;
+			double theta = Math.atan(m_y/m_x);
+			int index = (int) ((theta / (2 * Math.PI) + (m_x > 0 ? (m_y < 0 ? 1 : 0) : 0.5)) * seperation);
+			direction[index] += Player.PHEROME_IMPORTANCE * trans1(nearby_pherome.distance(player_cell));
+		}
+
 		double sum = 0;
 
 		for (int index = 0; index < direction.length; ++index) {
