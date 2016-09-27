@@ -9,9 +9,9 @@ import java.util.*;
 public class Player implements slather.sim.Player {
 
 	private Random gen;
-	private final static double THRESHOLD = 2;
 	private final static int ANGEL_RANGE = 360;
 	private final static int NUMBER_OF_RANDOM_TRY = 4;
+	private final static double PHEROME_IMPORTANCE = 0.2;
 	private int tail;
 	private double visible_distance;
 
@@ -62,25 +62,23 @@ public class Player implements slather.sim.Player {
 		return 4;
 	}
 
+	private double threshold(int tail, double visible_distance) {
+		return 2;
+	}
+
 	private int spin(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
-		return memory + 180/seperation;
+		return memory + Player.ANGEL_RANGE / seperation;
 	}
 
 	private int detector(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
-		double[] direction = new double[4];
+		double[] direction = new double[seperation];
 
 		for (Cell nearby_cell : nearby_cells) {
 			double m_x = nearby_cell.getPosition().x - player_cell.getPosition().x;
 			double m_y = nearby_cell.getPosition().y - player_cell.getPosition().y;
-			if (m_x >= 0 && m_y >= 0) {
-				direction[0] += trans1(nearby_cell.distance(player_cell));
-			} else if (m_x >= 0 && m_y < 0) {
-				direction[3] += trans1(nearby_cell.distance(player_cell));
-			} else if (m_x < 0 && m_y >= 0) {
-				direction[1] += trans1(nearby_cell.distance(player_cell));
-			} else if (m_x < 0 && m_y < 0) {
-				direction[2] += trans1(nearby_cell.distance(player_cell));
-			}
+			double theta = Math.atan(m_y/m_x);
+			int index = (int) ((theta / (2*Math.PI) + (m_x > 0 ? 0.25 : 0.75)) * seperation);
+			direction[index] += trans1(nearby_cell.distance(player_cell));
 		}
 
 		double sum = 0;
@@ -109,11 +107,11 @@ public class Player implements slather.sim.Player {
 
 		for (Pherome nearby_pherome : nearby_pheromes) {
 			if (nearby_pherome.player != player_cell.player) {
-				weightSum += 0.2 * trans1(nearby_pherome.distance(player_cell));
+				weightSum += Player.PHEROME_IMPORTANCE * trans1(nearby_pherome.distance(player_cell));
 			}
 		}
 
-		return weightSum >= Player.THRESHOLD;
+		return weightSum >= threshold(this.tail, this.visible_distance);
 	}
 
 	private double trans1(double a) {
