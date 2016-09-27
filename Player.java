@@ -9,44 +9,64 @@ import java.util.*;
 public class Player implements slather.sim.Player {
 
 	private Random gen;
+	private final static double THRESHOLD = 2;
+	private final static int ANGEL_RANGE = 360;
+	private final static int NUMBER_OF_RANDOM_TRY = 4;
+	private int tail;
+	private double visible_distance;
 
-	public void init(double d, int t) {
-		gen = new Random();
+	public void init(double d, int t, int side_length) {
+		this.gen = new Random();
+		this.visible_distance = d;
+		this.tail = t;
 	}
 
 	public Move play(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
 		if (player_cell.getDiameter() >= 2) // reproduce whenever possible
 			return new Move(true, (byte) -1, (byte) -1);
-		/* next step
-		if (nearby_cells.size() == 1) {
-			for (Cell c : nearby_cells) {
-				if (c.player == player_cell.player) {
-					// System.out.println("1---------------------------------------");
-					double newX = player_cell.getPosition().x - c.getPosition().x;
-					double newY = player_cell.getPosition().y - c.getPosition().y;
-					Point pos = new Point(newX, newY);
-					int arg = (int) (Math.atan2(newY, newX) / 3.1415926 * 180) + (newX < 0 ? 180 : 0);
-					// System.out.println(arg +
-					// "-----------------------------------------");
-					Point vector = extractVectorFromAngle(arg);
 
-					if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) {
+		// care bout your children, dude!
 
-						return new Move(vector, (byte) arg);
-					}
-
-				}
-			}
-		}
-		*/
-
+		// strategies choosen branch
+		int arg = 0;
+		int spin_sep = get_spin_sep(this.tail, this.visible_distance); 
+		int detector_sep = get_detector_sep(this.tail, this.visible_distance);
 		if (nearby_cells.size() == 0) {
-			Point vector = extractVectorFromAngle((int) memory);
-			// check for collisions
-			if (!collides(player_cell, vector, nearby_cells, nearby_pheromes))
-				return new Move(vector, memory);
+			arg = memory;
+		} else if (isCrowded(player_cell, nearby_cells, nearby_pheromes) == true) {
+			arg = spin(player_cell, memory, nearby_cells, nearby_pheromes, spin_sep);
+		} else {
+			arg = detector(player_cell, memory, nearby_cells, nearby_pheromes, detector_sep);
 		}
 
+		Point vector = extractVectorFromAngle(arg);
+		if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) {
+			return new Move(vector, (byte) arg);
+		}
+
+		// backup strategy: random escape
+		for (int i = 0; i < Player.NUMBER_OF_RANDOM_TRY; i++) {
+			arg = gen.nextInt(Player.ANGEL_RANGE) + 1;
+			vector = extractVectorFromAngle(arg);
+			if (!collides(player_cell, vector, nearby_cells, nearby_pheromes))
+				return new Move(vector, (byte) arg);
+		}
+		return new Move(new Point(0, 0), (byte) 0);	
+	}
+
+	private int get_spin_sep(int tail, double visible_distance) {
+		return 10;
+	}
+
+	private int get_detector_sep(int tail, double visible_distance) {
+		return 4;
+	}
+
+	private int spin(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
+		return memory + 180/seperation;
+	}
+
+	private int detector(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
 		double[] direction = new double[4];
 
 		for (Cell nearby_cell : nearby_cells) {
@@ -54,14 +74,11 @@ public class Player implements slather.sim.Player {
 			double m_y = nearby_cell.getPosition().y - player_cell.getPosition().y;
 			if (m_x >= 0 && m_y >= 0) {
 				direction[0] += trans1(nearby_cell.distance(player_cell));
-			}
-			if (m_x >= 0 && m_y < 0) {
+			} else if (m_x >= 0 && m_y < 0) {
 				direction[3] += trans1(nearby_cell.distance(player_cell));
-			}
-			if (m_x < 0 && m_y >= 0) {
+			} else if (m_x < 0 && m_y >= 0) {
 				direction[1] += trans1(nearby_cell.distance(player_cell));
-			}
-			if (m_x < 0 && m_y < 0) {
+			} else if (m_x < 0 && m_y < 0) {
 				direction[2] += trans1(nearby_cell.distance(player_cell));
 			}
 		}
@@ -80,20 +97,23 @@ public class Player implements slather.sim.Player {
 			if (sum <= 0) break;
 		}
 
-		// int arg = gen.nextInt(30) + min_index * 90 + 30;
-		int arg = index * 90 + gen.nextInt(90);
+		int arg = 0;
+		return arg = index * 90 + gen.nextInt(90);
+	}
 
-		Point vector = extractVectorFromAngle(arg);
-		if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) {
-			return new Move(vector, (byte) arg);
+	private boolean isCrowded(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
+		double weightSum = 0;
+		for (Cell nearby_cell : nearby_cells) {
+			weightSum += trans1(nearby_cell.distance(player_cell));
 		}
-		for (int i = 0; i < 4; i++) {
-			int arg2 = gen.nextInt(360) + 1;
-			Point vector2 = extractVectorFromAngle(arg2);
-			if (!collides(player_cell, vector2, nearby_cells, nearby_pheromes))
-				return new Move(vector2, (byte) arg2);
+
+		for (Pherome nearby_pherome : nearby_pheromes) {
+			if (nearby_pherome.player != player_cell.player) {
+				weightSum += 0.2 * trans1(nearby_pherome.distance(player_cell));
+			}
 		}
-		return new Move(new Point(0, 0), (byte) 0);	
+
+		return weightSum >= Player.THRESHOLD;
 	}
 
 	private double trans1(double a) {
@@ -104,8 +124,6 @@ public class Player implements slather.sim.Player {
 		return 1/Math.pow((0.01+a),2);
 	}
 
-	// check if moving player_cell by vector collides with any nearby cell or
-	// hostile pherome
 	private boolean collides(Cell player_cell, Point vector, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
 		Iterator<Cell> cell_it = nearby_cells.iterator();
 		Point destination = player_cell.getPosition().move(vector);
@@ -125,8 +143,6 @@ public class Player implements slather.sim.Player {
 		return false;
 	}
 
-	// convert an angle (in 2-deg increments) to a vector with magnitude
-	// Cell.move_dist (max allowed movement distance)
 	private Point extractVectorFromAngle(int arg) {
 		double theta = Math.toRadians((double) arg);
 		double dx = Cell.move_dist * Math.cos(theta);
