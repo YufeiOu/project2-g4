@@ -77,7 +77,7 @@ public class Player implements slather.sim.Player {
 			double m_x = nearby_cell.getPosition().x - player_cell.getPosition().x;
 			double m_y = nearby_cell.getPosition().y - player_cell.getPosition().y;
 			double theta = Math.atan(m_y/m_x);
-			int index = (int) ((theta / (2*Math.PI) + (m_x > 0 ? 0.25 : 0.75)) * seperation);
+			int index = (int) ((theta / (2 * Math.PI) + (m_x > 0 ? (m_y < 0 ? 1 : 0) : 0.5)) * seperation);
 			direction[index] += trans1(nearby_cell.distance(player_cell));
 		}
 
