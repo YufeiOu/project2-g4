@@ -96,7 +96,7 @@ public class Player implements slather.sim.Player {
 		}
 
 		int arg = 0;
-		return arg = index * 90 + gen.nextInt(90);
+		return arg = index * Player.ANGEL_RANGE / seperation + gen.nextInt(Player.ANGEL_RANGE / seperation);
 	}
 
 	private boolean isCrowded(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
