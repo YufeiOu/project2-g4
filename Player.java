@@ -63,7 +63,7 @@ public class Player implements slather.sim.Player {
 	}
 
 	private double threshold(int tail, double visible_distance) {
-		return 2;
+		return 2.5;
 	}
 
 	private int spin(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
@@ -108,19 +108,23 @@ public class Player implements slather.sim.Player {
 		return arg = index * Player.ANGEL_RANGE / seperation + gen.nextInt(Player.ANGEL_RANGE / seperation);
 	}
 
-	private boolean isCrowded(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
+	private boolean isCrowded(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, double d_filter) {
+		return density(player_cell, nearby_cells, nearby_pheromes, d_filter) >= threshold(this.tail, this.visible_distance);
+	}
+	
+	private double density(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, double d_filter) {
 		double weightSum = 0;
 		for (Cell nearby_cell : nearby_cells) {
-			weightSum += trans1(nearby_cell.distance(player_cell));
+			if (nearby_cell.distance(player_cell) < d_filter)
+				weightSum += trans1(nearby_cell.distance(player_cell));
 		}
 
 		for (Pherome nearby_pherome : nearby_pheromes) {
-			if (nearby_pherome.player != player_cell.player) {
+			if (nearby_pherome.player != player_cell.player && nearby_pherome.distance(player_cell) < d_filter) {
 				weightSum += Player.PHEROME_IMPORTANCE * trans1(nearby_pherome.distance(player_cell));
 			}
 		}
-
-		return weightSum >= threshold(this.tail, this.visible_distance);
+		return weightSum;
 	}
 
 	private double trans1(double a) {
