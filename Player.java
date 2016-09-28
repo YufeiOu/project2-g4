@@ -22,6 +22,14 @@ public class Player implements slather.sim.Player {
 		this.tail = t;
 	}
 
+	private boolean f(Cell player_cell, Set<Cell> nearby_cells) {
+		if (nearby_cells.size() != 1) return false;
+		for (Cell nearby_cell : nearby_cells) {
+			return nearby_cell.player == player_cell.player;
+		}
+		return true;
+	}
+
 	public Move play(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
 		if (player_cell.getDiameter() >= 2) // reproduce whenever possible
 			return new Move(true, (byte) -1, (byte) -1);
@@ -32,7 +40,11 @@ public class Player implements slather.sim.Player {
 		int arg = 0;
 		int spin_sep = get_spin_sep(this.tail, this.visible_distance); 
 		int detector_sep = get_detector_sep(this.tail, this.visible_distance);
-		if (nearby_cells.size() == 0) {
+		if (memory < 0 && nearby_cells.size() > 0) {
+			//System.out.println("here");
+			arg = getOppositeDirection(player_cell, nearby_cells, memory);
+			// System.out.println(arg);
+		} else if (nearby_cells.size() == 0 ) {// f(player_cell, nearby_cells) ) {
 			arg = memory;
 		} else if (isCrowded(player_cell, nearby_cells, nearby_pheromes, 2) == true) {
 			arg = spin(player_cell, memory, nearby_cells, nearby_pheromes, spin_sep);
@@ -64,11 +76,30 @@ public class Player implements slather.sim.Player {
 	}
 
 	private double threshold(int tail, double visible_distance) {
-		return 2.5;
+		return 3;
+	}
+
+	private int getOppositeDirection(Cell player_cell, Set<Cell> nearby_cells, byte memory) {
+		Cell nearest = null;
+		double minDis = Double.MAX_VALUE;
+		for (Cell c : nearby_cells) {
+			if (c.distance(player_cell) < minDis) {
+				minDis = c.distance(player_cell);
+				nearest = c;
+			}
+		}
+
+		Point pos = nearest.getPosition();
+		double vx = player_cell.getPosition().x - pos.x;
+		double vy = player_cell.getPosition().y - pos.y;
+
+		double theta = Math.atan(vy/vx);
+		int arg = (int)((theta / (2 * Math.PI) + (vx > 0 ? (vy < 0 ? 1 : 0) : 0.5)) * 120);
+		return arg + gen.nextInt(30) - 15;
 	}
 
 	private int spin(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
-		return (Player.ANGEL_RANGE / seperation + memory) / Player.SCALE;
+		return (Player.ANGEL_RANGE / seperation) / Player.SCALE + memory;
 	}
 
 	private int detector(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
@@ -159,6 +190,10 @@ public class Player implements slather.sim.Player {
 		double dx = Cell.move_dist * Math.cos(theta);
 		double dy = Cell.move_dist * Math.sin(theta);
 		return new Point(dx, dy);
+	}
+
+	private double extractRatioFromVector(double dx, double dy) {
+		return 0;
 	}
 
 }
