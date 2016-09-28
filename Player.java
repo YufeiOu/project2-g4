@@ -12,6 +12,7 @@ public class Player implements slather.sim.Player {
 	private final static int ANGEL_RANGE = 360;
 	private final static int NUMBER_OF_RANDOM_TRY = 4;
 	private final static double PHEROME_IMPORTANCE = 0.2;
+	private final static int SCALE = 3; // establish mapping from ANGEL_RANGE to byte so that every arg is in range [0, 120)
 	private int tail;
 	private double visible_distance;
 
@@ -46,7 +47,7 @@ public class Player implements slather.sim.Player {
 
 		// backup strategy: random escape
 		for (int i = 0; i < Player.NUMBER_OF_RANDOM_TRY; i++) {
-			arg = gen.nextInt(Player.ANGEL_RANGE) + 1;
+			arg = gen.nextInt(Player.ANGEL_RANGE / Player.SCALE) + 1;
 			vector = extractVectorFromAngle(arg);
 			if (!collides(player_cell, vector, nearby_cells, nearby_pheromes))
 				return new Move(vector, (byte) arg);
@@ -67,7 +68,7 @@ public class Player implements slather.sim.Player {
 	}
 
 	private int spin(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
-		return memory + Player.ANGEL_RANGE / seperation;
+		return (Player.ANGEL_RANGE / seperation + memory) / Player.SCALE;
 	}
 
 	private int detector(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
@@ -104,8 +105,7 @@ public class Player implements slather.sim.Player {
 			if (sum <= 0) break;
 		}
 
-		int arg = 0;
-		return arg = index * Player.ANGEL_RANGE / seperation + gen.nextInt(Player.ANGEL_RANGE / seperation);
+		return (index * Player.ANGEL_RANGE / seperation + gen.nextInt(Player.ANGEL_RANGE / seperation)) / Player.SCALE;
 	}
 
 	private boolean isCrowded(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, double d_filter) {
@@ -155,7 +155,7 @@ public class Player implements slather.sim.Player {
 	}
 
 	private Point extractVectorFromAngle(int arg) {
-		double theta = Math.toRadians((double) arg);
+		double theta = Math.toRadians((double) arg * Player.SCALE);
 		double dx = Cell.move_dist * Math.cos(theta);
 		double dy = Cell.move_dist * Math.sin(theta);
 		return new Point(dx, dy);
