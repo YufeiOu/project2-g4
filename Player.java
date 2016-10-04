@@ -9,10 +9,13 @@ import java.util.*;
 public class Player implements slather.sim.Player {
 
 	private Random gen;
-	private final static int ANGEL_RANGE = 360;
+	// weight parameters
 	private final static int NUMBER_OF_RANDOM_TRY = 4;
 	private final static double PHEROME_IMPORTANCE = 0.2;
+	// angel
+	private final static int ANGEL_RANGE = 360;
 	private final static int SCALE = 3; // establish mapping from ANGEL_RANGE to byte so that every arg is in range [0, 120)
+	private int our_angel_range;
 	private int tail;
 	private double visible_distance;
 
@@ -20,6 +23,7 @@ public class Player implements slather.sim.Player {
 		this.gen = new Random();
 		this.visible_distance = d;
 		this.tail = t;
+		this.our_angel_range = Player.ANGEL_RANGE / Player.SCALE;
 	}
 
 	private boolean f(Cell player_cell, Set<Cell> nearby_cells) {
@@ -59,7 +63,7 @@ public class Player implements slather.sim.Player {
 
 		// backup strategy: random escape
 		for (int i = 0; i < Player.NUMBER_OF_RANDOM_TRY; i++) {
-			arg = gen.nextInt(Player.ANGEL_RANGE / Player.SCALE) + 1;
+			arg = gen.nextInt(this.our_angel_range) + 1;
 			vector = extractVectorFromAngle(arg);
 			if (!collides(player_cell, vector, nearby_cells, nearby_pheromes))
 				return new Move(vector, (byte) arg);
@@ -97,7 +101,7 @@ public class Player implements slather.sim.Player {
 	}
 
 	private int spin(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
-		return ((Player.ANGEL_RANGE / Player.SCALE) / seperation + memory) % (Player.ANGEL_RANGE / Player.SCALE);
+		return ((this.our_angel_range) / seperation + memory) % (this.our_angel_range);
 	}
 
 	private int detector(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
@@ -132,7 +136,7 @@ public class Player implements slather.sim.Player {
 			if (sum <= 0) break;
 		}
 
-		return (index * Player.ANGEL_RANGE / seperation + gen.nextInt(Player.ANGEL_RANGE / seperation)) / Player.SCALE;
+		return (index * this.our_angel_range / seperation + gen.nextInt(this.our_angel_range / seperation)) % this.our_angel_range;
 	}
 
 	private boolean isCrowded(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, double d_filter) {
@@ -195,7 +199,7 @@ public class Player implements slather.sim.Player {
 	}
 
 	private int extractAngleFromVector(double dx, double dy) {
-		return (int) (extractRatioFromVector(dx, dy) * Player.ANGEL_RANGE / Player.SCALE);
+		return (int) (extractRatioFromVector(dx, dy) * this.our_angel_range);
 	}
 
 }
