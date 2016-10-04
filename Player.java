@@ -97,7 +97,7 @@ public class Player implements slather.sim.Player {
 	}
 
 	private int spin(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
-		return (Player.ANGEL_RANGE / seperation) / Player.SCALE + memory;
+		return ((Player.ANGEL_RANGE / Player.SCALE) / seperation + memory) % (Player.ANGEL_RANGE / Player.SCALE);
 	}
 
 	private int detector(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
