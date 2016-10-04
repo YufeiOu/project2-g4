@@ -76,7 +76,7 @@ public class Player implements slather.sim.Player {
 	}
 
 	private double threshold(int tail, double visible_distance) {
-		return 3;
+		return 2.5;
 	}
 
 	private int getOppositeDirection(Cell player_cell, Set<Cell> nearby_cells, byte memory) {
@@ -92,9 +92,7 @@ public class Player implements slather.sim.Player {
 		Point pos = nearest.getPosition();
 		double vx = player_cell.getPosition().x - pos.x;
 		double vy = player_cell.getPosition().y - pos.y;
-
-		double theta = Math.atan(vy/vx);
-		int arg = (int)((theta / (2 * Math.PI) + (vx > 0 ? (vy < 0 ? 1 : 0) : 0.5)) * 120);
+		int arg = extractAngleFromVector(vx, vy);
 		return arg + gen.nextInt(30) - 15;
 	}
 
@@ -108,8 +106,7 @@ public class Player implements slather.sim.Player {
 		for (Cell nearby_cell : nearby_cells) {
 			double m_x = nearby_cell.getPosition().x - player_cell.getPosition().x;
 			double m_y = nearby_cell.getPosition().y - player_cell.getPosition().y;
-			double theta = Math.atan(m_y/m_x);
-			int index = (int) ((theta / (2 * Math.PI) + (m_x > 0 ? (m_y < 0 ? 1 : 0) : 0.5)) * seperation);
+			int index = (int) (extractRatioFromVector(m_x, m_y) * seperation);
 			direction[index] += trans1(nearby_cell.distance(player_cell));
 		}
 
@@ -117,8 +114,7 @@ public class Player implements slather.sim.Player {
 			if (nearby_pherome.player == player_cell.player) continue;
 			double m_x = nearby_pherome.getPosition().x - player_cell.getPosition().x;
 			double m_y = nearby_pherome.getPosition().y - player_cell.getPosition().y;
-			double theta = Math.atan(m_y/m_x);
-			int index = (int) ((theta / (2 * Math.PI) + (m_x > 0 ? (m_y < 0 ? 1 : 0) : 0.5)) * seperation);
+			int index = (int) (extractRatioFromVector(m_x, m_y) * seperation);
 			direction[index] += Player.PHEROME_IMPORTANCE * trans1(nearby_pherome.distance(player_cell));
 		}
 
@@ -193,7 +189,13 @@ public class Player implements slather.sim.Player {
 	}
 
 	private double extractRatioFromVector(double dx, double dy) {
-		return 0;
+		double theta = Math.atan(dy/dx);
+		double ratio = (theta / (2 * Math.PI) + (dx > 0 ? (dy < 0 ? 1 : 0) : 0.5));
+		return ratio;
+	}
+
+	private int extractAngleFromVector(double dx, double dy) {
+		return (int) (extractRatioFromVector(dx, dy) * Player.ANGEL_RANGE / Player.SCALE);
 	}
 
 }
