@@ -11,7 +11,7 @@ public class Player implements slather.sim.Player {
 
 	private Random gen;
 	// weight parameters
-	private final static int NUMBER_OF_RANDOM_TRY = 100;
+	private final static int NUMBER_OF_RANDOM_TRY = 10;
 	private final static double PHEROME_IMPORTANCE = 0.2;
 
 	// range for tail length
@@ -35,9 +35,23 @@ public class Player implements slather.sim.Player {
 		this.our_angle_range = Player.ANGLE_RANGE / Player.SCALE;
 	}
 
+
+
+	private Set<Pherome> getEnemyPheromes(Set<Pherome> nearby_pheromes, Cell player_cell) {
+		Set<Pherome> limitedSet = new HashSet<>();
+		for (Pherome pherome : nearby_pheromes) {
+			if (player_cell.player != pherome.player){
+				limitedSet.add(pherome);
+			}
+		}
+		return limitedSet;
+	}
+
+
 	public Move play(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
 		if (player_cell.getDiameter() >= 2) // reproduce whenever possible
 			return new Move(true, (byte) -128, (byte) -128);
+			//return new Move(true, (byte) -128, (byte) -128);
 
 		// care bout your children, dude!
 
@@ -47,11 +61,16 @@ public class Player implements slather.sim.Player {
 		int detector_sep = get_detector_sep(this.tail, this.visible_distance);
 		double speed = getSpeed(player_cell, nearby_cells, nearby_pheromes, 2);
 
-		if (memory == -128 && nearby_cells.size() > 0) {
+
+		Set<Cell> limitedCells = limitCellRange(nearby_cells, player_cell);
+		Set<Pherome> limitedPheromes = limitPheromeRange(nearby_pheromes, player_cell);
+		Set<Pherome> enemyPheromes = getEnemyPheromes(limitedPheromes, player_cell);
+
+		if (memory == -128 && nearby_cells.size() > 0 && this.visible_distance >= 30) {
 			arg = getOppositeDirection(player_cell, nearby_cells);
-		} else if (nearby_cells.size() == 0) {
+		} else if (limitedCells.size() == 0 && enemyPheromes.size() == 0) {
 			arg = memory;
-		} else if (isCrowded(player_cell, nearby_cells, nearby_pheromes, 2) == true) {
+		} else if (isCrowded(player_cell, limitedCells, limitedPheromes, 2) == true) {
 
 			int tmp_arg = 0;
 			if (memory < 0 && memory >= -120) {// spin in opposite direction
@@ -73,32 +92,40 @@ public class Player implements slather.sim.Player {
 				
 			} else {
 				arg = (memory + 60) % 120;
-				tmp_vector = extractVectorFromAngle(arg, speed);
-				if (!collides(player_cell, tmp_vector, nearby_cells, nearby_pheromes)) {
-					
-					return new Move(tmp_vector, (byte) (-arg-1));
-				}
 
-			}
+				//for (double s = speed ; s > 0.1 ; s -= 0.1) {
+					tmp_vector = extractVectorFromAngle(arg, speed);
+					if (!collides(player_cell, tmp_vector, nearby_cells, nearby_pheromes)) {
+						return new Move(tmp_vector, (byte) (-arg-1));
+					}
+				//}
+			}	
 
 		} else {
 			arg = detector(player_cell, memory, nearby_cells, nearby_pheromes, detector_sep);
 		}
 
-
-		Point vector = extractVectorFromAngle(arg, speed);
-		if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) {
-			return new Move(vector, (byte) arg);
+		Point vector = null;
+		for (double s = speed; s > 0.1 ; s -= 0.1) {
+			 vector = extractVectorFromAngle(arg, s);
+			if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) {
+				return new Move(vector, (byte) arg);
+			}
 		}
 
 		// backup strategy: random escape
 		// TODO: add scale
-		for (int i = 0; i < Player.NUMBER_OF_RANDOM_TRY; i++) {
-			arg = gen.nextInt(this.our_angle_range) + 1;
-			vector = extractVectorFromAngle(arg, speed);
-			if (!collides(player_cell, vector, nearby_cells, nearby_pheromes))
-				return new Move(vector, (byte) arg);
+		for (double s = speed ; s > 0.1 ; s -= 0.1) {
+			for (int i = 0; i < Player.NUMBER_OF_RANDOM_TRY; i++) {
+				arg = gen.nextInt(this.our_angle_range) + 1;
+				vector = extractVectorFromAngle(arg, s);
+				if (!collides(player_cell, vector, nearby_cells, nearby_pheromes)) {
+					return new Move(vector, (byte) arg);
+				}
+				
+			}
 		}
+
 		return new Move(new Point(0, 0), (byte) 0);	
 	}
 
@@ -110,7 +137,7 @@ public class Player implements slather.sim.Player {
 		return 4;
 	}
 	private double isCrowdedThreshold(int tail, double visible_distance) {
-		return 2.5;
+		return 100;
 	}
 	private double getSpeed(Cell player_cell, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, double d_filter) {
 		double dens = density(player_cell, nearby_cells, nearby_pheromes, d_filter);
@@ -149,7 +176,7 @@ public class Player implements slather.sim.Player {
 		double vx = player_cell.getPosition().x - pos.x;
 		double vy = player_cell.getPosition().y - pos.y;
 		int arg = (int) extractAngleFromVector(vx, vy);
-		return arg + gen.nextInt(30) - 15;
+		return arg; //+ gen.nextInt(30) - 15;
 	}
 
 	private int spin(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
@@ -163,6 +190,8 @@ public class Player implements slather.sim.Player {
 		else 
 			return ( (memory - (Player.ANGLE_RANGE / seperation) / Player.SCALE) % 120 + 120) %120 ;
 	}
+
+
 
 	private int findLargestGap(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
 
@@ -198,20 +227,20 @@ public class Player implements slather.sim.Player {
 
 			if (i == l.size()-1) {
 				gap = l.get(0) - l.get(i) + 120;
-				direction = (l.get(0) + l.get(i))/2;
+				direction = (l.get(0) - gap/2 + 120)%120;
 			} else {
 				gap = l.get(i+1) - l.get(i);
 				direction = (l.get(i+1) + l.get(i))/2;
 			}
-			if (gap > 60) direction = (direction + 60) % 120;
+			
 			
 			int[] pair = {gap, direction};
 			pq.offer(pair);
 		}
 
 		int size = pq.size();
-
-		return pq.poll()[1];
+		int[] top = pq.poll();
+		return top[1];
 	}
 
 	private int densityRadar(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
@@ -249,12 +278,54 @@ public class Player implements slather.sim.Player {
 		return (index * this.our_angle_range / seperation + gen.nextInt(this.our_angle_range / seperation)) % this.our_angle_range;
 	}
 
+
+	private Set<Cell> limitCellRange(Set<Cell> nearby_cells, Cell player_cell) {
+		Set<Cell> limitedSet = new HashSet<>();
+		for (Cell cell : nearby_cells) {
+			if (player_cell.getPosition().distance(cell.getPosition()) < 3 * player_cell.getDiameter()){
+				limitedSet.add(cell);
+			}
+		}
+		return limitedSet;
+	}
+
+	private Set<Pherome> limitPheromeRange(Set<Pherome> nearby_pheromes, Cell player_cell) {
+		Set<Pherome> limitedSet = new HashSet<>();
+		for (Pherome cell : nearby_pheromes) {
+			if (player_cell.getPosition().distance(cell.getPosition()) < 3 * player_cell.getDiameter()){
+				limitedSet.add(cell);
+			}
+		}
+		return limitedSet;
+	}
+
 	private int detector(Cell player_cell, byte memory, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes, int seperation) {
-		if (this.visible_distance < 3) {
+		if (this.visible_distance < 30) {
 			// TODO: remove hardcode
-			return findLargestGap(player_cell, memory, nearby_cells, nearby_pheromes);
-			// Point p = findLargestGap(player_cell, nearby_cells, nearby_pheromes);
-			// return (int) extractAngleFromVector(p.x, p.y);
+			//ArrayList<GridObject> nearby_obstacles = getNearbyObstaclesEscapeSelf(player_cell, nearby_cells, nearby_pheromes);
+			Set<Cell> nearby_same = new HashSet<>();
+			Set<Cell> nearby_different = new HashSet<>();
+			Set<Pherome> nearby_pheromes_empty = new HashSet<>(); 
+
+			Set<Cell> limitedCells = limitCellRange(nearby_cells, player_cell);
+			Set<Pherome> limitedPheromes = limitPheromeRange(nearby_pheromes, player_cell); 
+
+			for (Cell cell : limitedCells) {
+				//if (player_cell.getPosition().distance(cell.getPosition()) < 5 * player_cell.getDiameter()){
+                if (cell.player == player_cell.player){
+                    nearby_same.add(cell);
+                } else {
+                    nearby_different.add(cell);
+                }
+                //nearby_obstacles.add(cell);
+            //} 
+        	}
+        	if(nearby_same.size() * 1.5 > nearby_different.size()){
+            	return findLargestGap(player_cell, memory, nearby_same, limitedPheromes);
+        	}
+			return findLargestGap(player_cell, memory, limitedCells, limitedPheromes);
+			 //Point p = findLargestGap(player_cell, nearby_cells, nearby_pheromes);
+			 //return (int) extractAngleFromVector(p.x, p.y);
 		} else {
 			return densityRadar(player_cell, memory, nearby_cells, nearby_pheromes, seperation);
 		}
@@ -282,7 +353,7 @@ public class Player implements slather.sim.Player {
 
 	
 	/* check if a position is prohibited */
-	private boolean collides(Cell player_cell, Point vector, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
+	private boolean collidesOriginal(Cell player_cell, Point vector, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
 		Iterator<Cell> cell_it = nearby_cells.iterator();
 		Point destination = player_cell.getPosition().move(vector);
 		while (cell_it.hasNext()) {
@@ -296,6 +367,26 @@ public class Player implements slather.sim.Player {
 			Pherome other = pherome_it.next();
 			if (other.player != player_cell.player
 					&& destination.distance(other.getPosition()) < 0.5 * player_cell.getDiameter() + 0.0001)
+				return true;
+		}
+		return false;
+	}
+
+
+	private boolean collides(Cell player_cell, Point vector, Set<Cell> nearby_cells, Set<Pherome> nearby_pheromes) {
+		Iterator<Cell> cell_it = nearby_cells.iterator();
+		Point destination = player_cell.getPosition().move(vector);
+		while (cell_it.hasNext()) {
+			Cell other = cell_it.next();
+			if (destination.distance(other.getPosition()) < 0.5 * player_cell.getDiameter() + 0.5 * other.getDiameter()
+					+ 0.00011)
+				return true;
+		}
+		Iterator<Pherome> pherome_it = nearby_pheromes.iterator();
+		while (pherome_it.hasNext()) {
+			Pherome other = pherome_it.next();
+			if (other.player != player_cell.player
+					&& destination.distance(other.getPosition()) < 0.5 * player_cell.getDiameter() * 1.01 + 0.0001)
 				return true;
 		}
 		return false;
